@@ -1,0 +1,234 @@
+	I. PACKET FORMATS  
+	============================================================
+	A data packet between GW and server is defined as:
+	
+	HEADER|STAMP|GATEWAY_ID|DEV_ID|DEV_TYPE|DATA_TYPE|DATA_LEN|DATA|CRC
+	
+	Packet description
+	------------------------------------------------------------
+	HEADER: start of a packet
+		length: 4 bytes
+		content: fixed e.g. 0xAAAA
+	
+	STAMP: incrementing stamp for REQ message, init is 1 
+	        length: 4 bytes, unsigned long
+		content:  long
+	
+	GATEWAY_ID: id of the gateway
+		length: 8 bytes
+	
+	DEV_ID: id of the node/dev
+		length: 8 bytes
+	
+	DEV_TYPE: device type
+		length: 2 bytes, unsigned int, min from 1
+		content: predefined references, see below
+	
+	DATA_TYPE: type of the packet
+		length: 2 bytes, unsigned int, min from 1
+		content: predefined references, see below
+	
+	DATA_LEN: length of the data
+		length: 2 bytes, unsigned int
+		content: 1-65535
+	
+	DATA: variable data stream
+		length: varying
+	
+	CRC: crc(optional)
+		length: 1 byte
+	
+	
+	II. Data description
+	============================================================
+	
+	1. DEV_TYPE  
+	==============================
+	
+	A. switches:
+	1-channel switch:		DEV_SWITCH_1
+	2-channel switch: 		DEV_SWITCH_2
+	3-channel switch: 		DEV_SWITCH_3
+	4-channel switch: 		DEV_SWITCH_4
+	1-channel dimmable switch:	DEV_DIMSWITCH_1
+	1-channel curtain: 		DEV_CURTAIN_1
+	2-channel curtain: 		DEV_CURTAIN_2
+	4-channel theme selector: 	DEV_THEME_4
+	1-channel socket:		DEV_SOCK_1
+	
+	B. sensors:
+	1-channel smoke sensor: 	DEV_SENSOR_SMOKE
+	1-channel CO sensor: 		DEV_SENSOR_CO
+	1-channel WATER sensor: 	DEV_SENSOR_WATER
+	1-channel temperature sensor: 	DEV_SENSOR_TEHU
+	1-channel humidity sensor: 	DEV_SENSOR_TEHU
+	1-channel tempo+humid sensor: 	DEV_SENSOR_TEHU
+	
+	C. mechanics:
+	1-channel mechanical valve: 	DEV_MECH_VALVE
+	
+	D. controller:
+	1-channel infrared controller: 	DEV_INFRACTRL
+	
+	2. DATA_TYPE  
+	============================
+	
+	1. status: 	DATA_STAT
+	2. control: 	DATA_CTRL
+	3. theme set: 	DATA_THEME_SET
+	
+	4. pulse for long tcp connection: 	DATA_REQ_PULSE
+	5. pulse ack from server: 		DATA_ACK_PULSE
+	6. dev/gw status synchronization: 	DATA_REQ_SYNC
+	7. dev/gw status synchronization ack: 	DATA_ACK_SYNC
+	8. gw auth request: 			DATA_REQ_AUTH_GW
+	9. gw auth ack: 			DATA_ACK_AUTH_GW
+	10. dev auth request: 			DATA_REQ_AUTH_DEV
+	11. dev auth ack: 			DATA_ACK_AUTH_DEV
+	12. user list request: 			DATA_REQ_USER 
+	13. user list ack: 			DATA_ACK_USER 
+	14. initializaion stamp: 		DATA_REQ_STAMP
+	15. initializaion stamp ack: 		DATA_ACK_STAMP
+	16. reset:	 			DATA_SYS_RESET
+	17. ..
+	
+	
+	============================================================
+	III. DATA CONTENTS  数据内容
+	============================================================
+	A. status:
+	ON == 100
+	OFF == 0
+	ERR == 0xFx
+	LEVEL == 0:100 (for dimmable lights, valve, and motor)
+	THEME == 1:100
+	SENSOR_ON = ON
+	SENSOR_OFF = OFF
+	VALUE == 2 bytes for .1f floats 
+	
+	B. control:
+	ON == 100
+	OFF == 0
+	LEVEL == 0:100
+	THEME == 1:100
+	
+	C. errors:
+	ERR_NET == 0xF0
+	ERR_ELEC == 0xF1
+	ERR_SYS == 0xF2
+	
+	D. tcp pulse:
+	PULSE == 0xAA
+		
+	E. auth:
+	AUTH_OK == 0
+	AUTH_NO == 0xFF
+	
+	
+	============================================================
+	IV. PACKET EXAMPLES  
+	============================================================
+	A. 2-channel switch status:
+	HEADER|STAMP|GATEWAY_ID|DEV_ID|DEV_TYPE|DATA_TYPE|DATA_LEN|DATA|CRC
+	-------------------------------------------------------------------
+	HEADER == 0x0D 0x0D 0x0D 0x0D    
+	STAMP == 0
+	GATEWAY_ID == 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 (id of the gw)
+	DEV_ID == 0xAE 0xD0 0xC2 0xAA 0xC1 0xD2 0x21 0x22 (id of the dev)
+	DEV_TYPE == DEV_SWITCH_2 
+	DATA_TYPE == DATA_STAT 
+	DATA_LEN == 2 
+	DATA == ON ON
+	CRC == NULL
+	
+	B. gw sync req:
+	HEADER|STAMP|GATEWAY_ID|DEV_ID|DEV_TYPE|DATA_TYPE|DATA_LEN|DATA|CRC
+	-------------------------------------------------------------------
+	HEADER == 0x0D 0x0D 0x0D 0x0D    
+	STAMP == 0
+	GATEWAY_ID == 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 (id of the gw)
+	DEV_ID == 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 (send empty id)
+	DEV_TYPE == 0 (send empty dev type) 
+	DATA_TYPE == DATA_REQ_SYNC
+	DATA_LEN == 4 
+	DATA == GW STAMP (unsigned long) 
+	CRC == NULL
+	
+	C. gw sync ack:
+	HEADER|STAMP|GATEWAY_ID|DEV_ID|DEV_TYPE|DATA_TYPE|DATA_LEN|DATA|CRC
+	-------------------------------------------------------------------
+	HEADER == 0x0D 0x0D 0x0D 0x0D    
+	STAMP == 0
+	GATEWAY_ID == 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 (id of the gw)
+	DEV_ID == 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 (send empty id)
+	DEV_TYPE == 0 (send empty dev type) 
+	DATA_TYPE == DATA_ACK_SYNC
+	DATA_LEN == varying 
+	DATA == status of the gateway (64 bytes) 
+	CRC == NULL
+	
+	D. tcp pulse req:
+	HEADER|STAMP|GATEWAY_ID|DEV_ID|DEV_TYPE|DATA_TYPE|DATA_LEN|DATA|CRC
+	-------------------------------------------------------------------
+	HEADER == 0x0D 0x0D 0x0D 0x0D    
+	STAMP == 0
+	GATEWAY_ID == 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 (id of the gw)
+	DEV_ID == 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 (send empty id)
+	DEV_TYPE == 0 (send empty dev type) 
+	DATA_TYPE == DATA_REQ_PULSE
+	DATA_LEN == 1 
+	DATA == PULSE 
+	CRC == NULL
+	
+	============================================================
+	V. Other notations
+	============================================================
+	1. status stamps are cyclic unsigned long: 0-2^32
+	2. req stamps are cyclic unsigned int: 0-65535
+
+	Protocol to synchronize one znode  
+	
+	From GW to server 
+	1. GW send znode's stamp to server
+	2. server compare the stamp
+	3. if the stamp on server is smaller than the stamp from GW:
+	    1. server send back its stamp to GW (DATA_REQ_SYNC)
+	    2. GW send znodes's sync status to server
+	    3. server update the znode's status, and update its stamp
+	4. if the stamp on server is greater than the stmap from GW:
+	    1. server send znode's sync status to GW
+	    2. GW update the znode's status, and update its stamp
+	5. if stamp are equal, do nothing
+	
+	From server to GW 
+	1. server send znode's stamp to GW
+	2. GW compare the stamp
+	3. if the stamp on GW is smaller than the stamp from server:
+	    1. GW send back its stamp to server
+	    2. server send znodes's sync status to GW
+	    3. server update the znode's status, and update its stamp
+	4. if the stamp on server is greater than the stmap from GW:
+	    1. server send znode's sync status to GW
+	    2. GW update the znode's status, and update its stamp
+
+
+	Protocol for maintaining a long TCP link
+	
+	1. If first connected, set link status as connected.
+	2. Keep link status as connected until a read/write error occurs.
+	3. When connected, send pulse packet (1 byte) per second:
+	    if send failed, set link status as disconnected
+	    if no ACK from server after 1 seconds, set link status as disconnected
+	4. If disconnected, reconnect immediately every 1 second
+
+
+
+
+
+
+
+
+
+
+
+
